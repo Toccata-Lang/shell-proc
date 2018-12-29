@@ -1,0 +1,121 @@
+
+(add-ns fio (git-dependency "https://github.com/Toccata-Lang/file-io.git"
+                            "file-io.toc"
+                            :sha "08058d6"))
+(add-ns st (git-dependency "https://github.com/Toccata-Lang/stream.git"
+                           "stream.toc"
+                           :sha "c778079"))
+(add-ns sys (git-dependency "https://github.com/Toccata-Lang/system.git"
+                            "system.toc"
+                            :sha "2978872"))
+
+(defn exec
+  ([path]
+   (exec path empty-list))
+  ([path args]
+   (inline C Maybe "
+  String *path = nullTerm(path_0);;
+
+  List *argList = (List *)args_1;
+  if (argList->len == 0) {
+    execl(path->buffer, \"\");
+    exit(1);
+  } else {
+    char **args = malloc(sizeof(char*) * (argList->len + 2));
+    int i;
+    Value *arg;
+    args[0] = path->buffer;
+    for (i = 1;
+         argList != (List *)0 && argList->head != (Value *)0;
+         argList = argList->tail, i++) {
+      arg = argList->head;
+      if (arg->type == StringBufferType) {
+        args[i] = ((String *)arg)->buffer;
+      } else {
+        args[i] = ((SubString *)arg)->buffer;
+      }
+    }
+    args[i] = (char *)0;
+    execv(path->buffer, args);
+    exit(1);
+  }
+  dec_and_free(args_1, 1);
+  return(nothing);
+")))
+
+(defn child-proc [path args]
+  (inline C "
+  String *path = nullTerm(path_0);;
+
+  int rpipefd[2], wpipefd[2], pid;
+  pipe(rpipefd);
+  pipe(wpipefd);
+
+  pid = fork();
+  if(pid == 0)
+  {
+    // child process
+    close(rpipefd[0]);
+    dup2(rpipefd[1],STDOUT_FILENO);
+    dup2(rpipefd[1],STDERR_FILENO);
+    close(wpipefd[1]);
+    dup2(wpipefd[0],STDIN_FILENO);
+    close(rpipefd[1]);
+    close(wpipefd[0]);
+
+    List *argList = (List *)args_1;
+    if (argList->len == 0) {
+      execl(path->buffer, path->buffer);
+      exit(1);
+    } else {
+      char **args = malloc(sizeof(char*) * (argList->len + 2));
+      int i;
+      Value *arg;
+      args[0] = path->buffer;
+      for (i = 1;
+           argList != (List *)0 && argList->head != (Value *)0;
+           argList = argList->tail, i++) {
+        arg = argList->head;
+        if (arg->type == StringBufferType) {
+          args[i] = ((String *)arg)->buffer;
+        } else {
+          args[i] = ((SubString *)arg)->buffer;
+        }
+      }
+      args[i] = (char *)0;
+      execv(path->buffer, args);
+      exit(1);
+    }
+    dec_and_free(path_0, 1);
+    dec_and_free(args_1, 1);
+  }
+  close(wpipefd[0]);
+  close(rpipefd[1]);
+
+  // TODO: eventually, we want to return this
+  close(wpipefd[1]);
+        
+  dec_and_free((Value *)path, 1);
+  dec_and_free(path_0, 1);
+  dec_and_free(args_1, 1);
+  Value *opaque = makeFileStruct(fdopen(rpipefd[0], \"r\"));
+  return(opaque);
+"))
+
+(defn command-stream
+  ([path] (command-stream path empty-list))
+  ([path & args]
+   (-> (child-proc path args)
+       (fio/InputFile path)
+       st/stream)))
+
+(defn command [path args]
+  ;; Execute a shell command and wait until it finishes.
+  ;; Gives no access to the input or output
+  (let [pid (sys/fork)]
+    (or (and (< pid 0)
+             (let [_ (print-err "Error forking" path "process")]
+               (abort)))
+        (and (= pid 0)
+             (maybe (exec path (map args null-term))))
+        (= 0 (sys/waitpid pid)))))
