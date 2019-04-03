@@ -1,7 +1,7 @@
 
 (add-ns fio (git-dependency "https://github.com/Toccata-Lang/file-io.git"
                             "file-io.toc"
-                            :sha "95851e0"))
+                            :sha "3602513"))
 (add-ns st (git-dependency "https://github.com/Toccata-Lang/stream.git"
                            "stream.toc"
                            :sha "c778079"))
