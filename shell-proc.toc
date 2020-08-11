@@ -1,13 +1,13 @@
 
 (add-ns fio (git-dependency "https://github.com/Toccata-Lang/file-io.git"
                             "file-io.toc"
-                            :sha "4b6a964"))
+                            :sha "116ce64"))
 (add-ns st (git-dependency "https://github.com/Toccata-Lang/stream.git"
                            "stream.toc"
                            :sha "c778079"))
 (add-ns sys (git-dependency "https://github.com/Toccata-Lang/system.git"
                             "system.toc"
-                            :sha "2978872"))
+                            :sha "64d4947"))
 
 (defn exec
   ([path]
