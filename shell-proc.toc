@@ -1,18 +1,24 @@
 
 (add-ns fio (git-dependency "https://github.com/Toccata-Lang/file-io.git"
                             "file-io.toc"
-                            :sha "116ce64"))
+                            :sha "36fa952"))
 (add-ns st (git-dependency "https://github.com/Toccata-Lang/stream.git"
                            "stream.toc"
-                           :sha "c778079"))
+                           :sha "4aa15f9"))
 (add-ns sys (git-dependency "https://github.com/Toccata-Lang/system.git"
                             "system.toc"
-                            :sha "64d4947"))
+                            :sha "13097ff"))
 
 (defn exec
   ([path]
+   (assert (instance? String path))
+
    (exec path empty-list))
+
   ([path args]
+   (assert (instance? String path))
+   (assert (instance? (list-of String) args))
+
    (inline C Maybe "
   String *path = nullTerm(path_0);;
 
@@ -44,6 +50,9 @@
 ")))
 
 (defn child-proc [path args]
+  (assert (instance? String path))
+  (assert (instance? (list-of String) args))
+
   (inline C "
   String *path = nullTerm(path_0);;
 
