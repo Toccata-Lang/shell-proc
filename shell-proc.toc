@@ -7,7 +7,7 @@
                            :sha "4aa15f9"))
 (add-ns sys (git-dependency "https://github.com/Toccata-Lang/system.git"
                             "system.toc"
-                            :sha "13097ff"))
+                            :sha "30b346e"))
 
 (defn exec
   ([path]
